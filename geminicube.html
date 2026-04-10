@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure CSS 3D Rubik's Cube</title>
+    <style>
+        :root {
+            --size: clamp(40px, 8vmin, 70px);
+            --transition-speed: 0.6s;
+            --cube-tilt-x: -25deg;
+            --cube-tilt-y: -35deg;
+
+            --c-up: #ffffff;
+            --c-down: #ffd500;
+            --c-front: #009b48;
+            --c-back: #0045ad;
+            --c-left: #ff5900;
+            --c-right: #b71234;
+            --c-inner: #111111;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e1e2f, #12121c);
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .app-container {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+        }
+
+        /* --- Controls --- */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            border-color: #fff;
+        }
+
+        /* --- 3D Scene --- */
+        .scene {
+            perspective: 1000px;
+            width: calc(var(--size) * 3);
+            height: calc(var(--size) * 3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cube {
+            position: relative;
+            width: 0;
+            height: 0;
+            transform-style: preserve-3d;
+            transform: rotateX(var(--cube-tilt-x)) rotateY(var(--cube-tilt-y));
+            transition: transform 0.5s ease;
+        }
+
+        .scene:hover .cube {
+            transform: rotateX(calc(var(--cube-tilt-x) - 10deg)) rotateY(calc(var(--cube-tilt-y) + 10deg));
+        }
+
+        /* --- Cubie Logic --- */
+        .cubie {
+            position: absolute;
+            width: var(--size);
+            height: var(--size);
+            top: calc(var(--size) / -2);
+            left: calc(var(--size) / -2);
+            transform-style: preserve-3d;
+            transition: transform var(--transition-speed) cubic-bezier(0.25, 1, 0.5, 1);
+
+            --rx: 0deg;
+            --ry: 0deg;
+            --rz: 0deg;
+
+            transform: rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) translate3d(calc(var(--x) * var(--size)), calc(var(--y) * var(--size)), calc(var(--z) * var(--size)));
+        }
+
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--c-inner);
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .face::after {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border-radius: 3px;
+            background: inherit;
+        }
+
+        /* Face Orientations */
+        .f-front {
+            transform: rotateY(0deg) translateZ(calc(var(--size) / 2));
+        }
+
+        .f-back {
+            transform: rotateY(180deg) translateZ(calc(var(--size) / 2));
+        }
+
+        .f-right {
+            transform: rotateY(90deg) translateZ(calc(var(--size) / 2));
+        }
+
+        .f-left {
+            transform: rotateY(-90deg) translateZ(calc(var(--size) / 2));
+        }
+
+        .f-top {
+            transform: rotateX(90deg) translateZ(calc(var(--size) / 2));
+        }
+
+        .f-bottom {
+            transform: rotateX(-90deg) translateZ(calc(var(--size) / 2));
+        }
+
+        /* Sticker Colors */
+        .cubie[data-z="1"] .f-front::after {
+            background: var(--c-front);
+        }
+
+        .cubie[data-z="-1"] .f-back::after {
+            background: var(--c-back);
+        }
+
+        .cubie[data-x="1"] .f-right::after {
+            background: var(--c-right);
+        }
+
+        .cubie[data-x="-1"] .f-left::after {
+            background: var(--c-left);
+        }
+
+        .cubie[data-y="-1"] .f-top::after {
+            background: var(--c-up);
+        }
+
+        .cubie[data-y="1"] .f-bottom::after {
+            background: var(--c-down);
+        }
+
+        /* --- Pure CSS Interaction Logic --- */
+        /* If button is hovered, rotate the corresponding cubies inside the cube */
+        .app-container:has(.btn[data-action="top"]:hover) .cubie[data-y="-1"] {
+            --ry: 90deg;
+        }
+
+        .app-container:has(.btn[data-action="mid-y"]:hover) .cubie[data-y="0"] {
+            --ry: 90deg;
+        }
+
+        .app-container:has(.btn[data-action="bot"]:hover) .cubie[data-y="1"] {
+            --ry: 90deg;
+        }
+
+        .app-container:has(.btn[data-action="left"]:hover) .cubie[data-x="-1"] {
+            --rx: 90deg;
+        }
+
+        .app-container:has(.btn[data-action="mid-x"]:hover) .cubie[data-x="0"] {
+            --rx: 90deg;
+        }
+
+        .app-container:has(.btn[data-action="right"]:hover) .cubie[data-x="1"] {
+            --rx: 90deg;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <div class="controls">
+            <h3>Row Controls</h3>
+            <div class="btn" data-action="top">Top Row <span>⟲</span></div>
+            <div class="btn" data-action="mid-y">Middle Row <span>⟲</span></div>
+            <div class="btn" data-action="bot">Bottom Row <span>⟲</span></div>
+        </div>
+
+        <div class="scene">
+            <div class="cube">
+                <div class="cubie" style="--x:-1; --y:-1; --z:-1" data-x="-1" data-y="-1" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:-1; --z:-1" data-x="0" data-y="-1" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:-1; --z:-1" data-x="1" data-y="-1" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:0; --z:-1" data-x="-1" data-y="0" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:0; --z:-1" data-x="0" data-y="0" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:0; --z:-1" data-x="1" data-y="0" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:1; --z:-1" data-x="-1" data-y="1" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:1; --z:-1" data-x="0" data-y="1" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:1; --z:-1" data-x="1" data-y="1" data-z="-1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:-1; --z:0" data-x="-1" data-y="-1" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:-1; --z:0" data-x="0" data-y="-1" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:-1; --z:0" data-x="1" data-y="-1" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:0; --z:0" data-x="-1" data-y="0" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:0; --z:0" data-x="0" data-y="0" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:0; --z:0" data-x="1" data-y="0" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:1; --z:0" data-x="-1" data-y="1" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:1; --z:0" data-x="0" data-y="1" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:1; --z:0" data-x="1" data-y="1" data-z="0">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:-1; --z:1" data-x="-1" data-y="-1" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:-1; --z:1" data-x="0" data-y="-1" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:-1; --z:1" data-x="1" data-y="-1" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:0; --z:1" data-x="-1" data-y="0" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:0; --z:1" data-x="0" data-y="0" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:0; --z:1" data-x="1" data-y="0" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:-1; --y:1; --z:1" data-x="-1" data-y="1" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:0; --y:1; --z:1" data-x="0" data-y="1" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+                <div class="cubie" style="--x:1; --y:1; --z:1" data-x="1" data-y="1" data-z="1">
+                    <div class="face f-front"></div>
+                    <div class="face f-back"></div>
+                    <div class="face f-left"></div>
+                    <div class="face f-right"></div>
+                    <div class="face f-top"></div>
+                    <div class="face f-bottom"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>Col Controls</h3>
+            <div class="btn" data-action="left">Left Col <span>⟳</span></div>
+            <div class="btn" data-action="mid-x">Middle Col <span>⟳</span></div>
+            <div class="btn" data-action="right">Right Col <span>⟳</span></div>
+        </div>
+    </div>
+
+</body>
+
+</html>

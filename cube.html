@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>3x3 Cube Animation</title>
+  <style>
+    /* Base Positioning for each Cubie */
+    .cubie {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      /* Position them based on their grid coordinates */
+      transform:
+        translate3d(calc(var(--x) * 62px), calc(var(--y) * 62px), calc(var(--z) * 62px));
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+    }
+
+    /* THE LOGIC: Rotate only the top layer pieces */
+    #rotate-top:checked~.scene .top-layer {
+      transform:
+        rotateY(90deg)
+        /* The rotation of the layer */
+        translate3d(calc(var(--x) * 62px), calc(var(--y) * 62px), calc(var(--z) * 62px));
+    }
+
+    /* General Face Styling */
+    .face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: 2px solid black;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <input type="checkbox" id="rotate-top">
+  <label for="rotate-top">Rotate Top Layer</label>
+
+  <div class="scene">
+    <div class="cube">
+      <div class="cubie top-layer" style="--x:-1; --y:-1; --z:1;">
+        <div class="face front"></div>
+        <div class="face top"></div>
+        <div class="face left"></div>
+      </div>
+
+    </div>
+  </div>
+</body>
+
+</html>
